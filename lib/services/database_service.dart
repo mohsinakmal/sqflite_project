@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_project/models/task.dart';
 
 class DatabaseService {
   // here we are using singleton pattern
@@ -24,16 +25,18 @@ class DatabaseService {
     final databaseDirPath = await getDatabasesPath();
     // creating name for db  and joining the path
     final databasePath = join(databaseDirPath, "master_db.db");
+    //await deleteDatabase(databasePath);
     // using sqfLite opening up db
     // currently we don't have scheme and the tables
     final database = await openDatabase(
       databasePath,
+      version: 3,
       onCreate: (db, version) {
         db.execute('''
           CREATE TABLE $_tasksTableName(
           $_tasksIdColumnName INTEGER PRIMARY KEY,
           $_tasksContentColumnName TEXT NOT NULL,
-          $_tasksStatusColumnName INTEGER NOT NULL,
+          $_tasksStatusColumnName INTEGER NOT NULL
           )
           ''');
       },
@@ -49,4 +52,35 @@ class DatabaseService {
     });
   }
 
+  Future<List<Task>> getTasks() async{
+    final db = await database;
+    final data = await db.query(_tasksTableName);
+    List<Task> tasks = data.map((e) => Task(id: e["id"] as int, status: e["status"] as int, content: e["content"] as String)).toList();
+    return tasks;
+  }
+
+  void updateTask(int id, int status) async{
+    final db = await database;
+    await db.update(
+        _tasksTableName,
+        {
+          _tasksStatusColumnName: status,
+        },
+        where: 'id = ?',
+      whereArgs: [
+        id,
+      ]
+    );
+  }
+  
+  void deleteTask(int id) async{
+    final db = await database;
+    await db.delete(_tasksTableName,
+    where: 'id = ?',
+      whereArgs: [
+        id,
+      ]
+    );
+  }
+  
 }
